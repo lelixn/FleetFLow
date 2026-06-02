@@ -116,7 +116,3 @@ cd backend
 mvn clean package
 ```
 
-## Notes
-
-- The existing `frontend/README.md` is the default Vite template and can be replaced later with app-specific frontend documentation if needed.
-- Start backend first, then frontend, to avoid API connection errors during development.
