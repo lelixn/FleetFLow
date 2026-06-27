@@ -32,7 +32,7 @@ public class AuthServiceImpl implements AuthService {
     public JwtResponse login(LoginRequest request) {
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new BadRequestException("Invalid username or password"));
-        if (!user.isActive()) {
+        if (!user.getActive()) {
             throw new DisabledException("Account is disabled");
         }
 
