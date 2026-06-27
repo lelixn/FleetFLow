@@ -170,3 +170,13 @@ These are recommended before a public SaaS launch:
 4. **Secrets management** — Use Docker secrets, Vault, or cloud KMS for JWT and DB credentials
 5. **Observability** — Wire Actuator metrics to Prometheus/Grafana; add structured logging
 6. **Rate limiting** — Protect auth endpoints from brute-force attempts
+
+## AIML Integration Pathway
+
+FleetFlow is ready for AI/ML integration! Here are key areas:
+
+1. **Route Optimization**: Use historical tracking and delivery data to optimize routes
+2. **Demand Forecasting**: Predict delivery demands to plan better fleet allocation
+3. **Driver Performance Analysis**: Identify patterns in driver behavior and efficiency
+4. **Vehicle Maintenance Predictions**: Use vehicle telemetry to forecast maintenance needs
+5. **ETA Predictions**: Build machine learning models to predict accurate delivery times
