@@ -1,5 +1,6 @@
 package com.routeforge.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -33,4 +34,22 @@ public class Route {
     @ManyToOne
     @JoinColumn(name = "driver_id")
     private Driver driver;
+
+    @Transient
+    private Long driverId;
+
+    @Transient
+    private Long vehicleId;
+
+    @JsonProperty("driverId")
+    public Long getDriverId() {
+        if (driverId != null) return driverId;
+        return driver != null ? driver.getId() : null;
+    }
+
+    @JsonProperty("vehicleId")
+    public Long getVehicleId() {
+        if (vehicleId != null) return vehicleId;
+        return vehicle != null ? vehicle.getId() : null;
+    }
 }

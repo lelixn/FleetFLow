@@ -3,7 +3,8 @@ import { Truck, Users, MapPin, Package, Activity, Clock } from 'lucide-react'
 import Topbar from '../components/layout/Topbar'
 import StatCard from '../components/ui/StatCard'
 import Badge from '../components/ui/Badge'
-import { vehiclesApi, driversApi, routesApi, deliveriesApi, type Delivery } from '../lib/api'
+import { analyticsApi, deliveriesApi, driversApi, routesApi, vehiclesApi, type AnalyticsSummary, type Delivery, type Driver, type Route, type Vehicle, unwrapApiData } from '../lib/api'
+import { useLiveConfig } from '../lib/live'
 import { formatDateTime } from '../lib/utils'
 
 interface Summary {
@@ -22,21 +23,46 @@ export default function Dashboard() {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [recentDeliveries, setRecentDeliveries] = useState<Delivery[]>([])
   const [loading, setLoading] = useState(true)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const now = new Date().toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+  const { enabled: liveEnabled, intervalSec: refreshEverySec } = useLiveConfig()
 
   useEffect(() => {
-    async function load() {
+    async function load(initial = false) {
       try {
-        const [vRes, dRes, rRes, delRes] = await Promise.allSettled([
+        if (initial) setLoading(true)
+        const [sumRes, delRes] = await Promise.allSettled([
+          analyticsApi.summary(),
+          deliveriesApi.getAll(),
+        ])
+
+        const deliveriesRaw = delRes.status === 'fulfilled' ? unwrapApiData<Delivery[]>(delRes.value.data) : []
+        const deliveries = Array.isArray(deliveriesRaw) ? deliveriesRaw : []
+
+        setRecentDeliveries(deliveries.slice(-6).reverse())
+
+        if (sumRes.status === 'fulfilled') {
+          const s = unwrapApiData<AnalyticsSummary>(sumRes.value.data)
+          if (s) {
+            setSummary(s)
+            return
+          }
+        }
+
+        // Fallback: compute summary from the older list endpoints.
+        const [vRes, dRes, rRes] = await Promise.allSettled([
           vehiclesApi.getAll(),
           driversApi.getAll(),
           routesApi.getAll(),
-          deliveriesApi.getAll(),
         ])
-        const vehicles = vRes.status === 'fulfilled' ? vRes.value.data : []
-        const drivers  = dRes.status === 'fulfilled'  ? dRes.value.data  : []
-        const routes   = rRes.status === 'fulfilled'  ? rRes.value.data  : []
-        const deliveries = delRes.status === 'fulfilled' ? delRes.value.data : []
+
+        const vehiclesRaw = vRes.status === 'fulfilled' ? unwrapApiData<Vehicle[]>(vRes.value.data) : []
+        const driversRaw = dRes.status === 'fulfilled' ? unwrapApiData<Driver[]>(dRes.value.data) : []
+        const routesRaw = rRes.status === 'fulfilled' ? unwrapApiData<Route[]>(rRes.value.data) : []
+
+        const vehicles = Array.isArray(vehiclesRaw) ? vehiclesRaw : []
+        const drivers = Array.isArray(driversRaw) ? driversRaw : []
+        const routes = Array.isArray(routesRaw) ? routesRaw : []
 
         setSummary({
           vehicles: vehicles.length,
@@ -49,17 +75,24 @@ export default function Dashboard() {
           inTransit: deliveries.filter(d => d.status === 'IN_TRANSIT').length,
           delivered: deliveries.filter(d => d.status === 'DELIVERED').length,
         })
-        setRecentDeliveries(deliveries.slice(-6).reverse())
+        setLastUpdated(new Date())
       } finally {
-        setLoading(false)
+        if (initial) setLoading(false)
       }
     }
-    load()
-  }, [])
+
+    load(true)
+    if (!liveEnabled) return
+    const interval = window.setInterval(() => load(false), refreshEverySec * 1000)
+    return () => window.clearInterval(interval)
+  }, [liveEnabled, refreshEverySec])
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <Topbar title="Dashboard" subtitle={now} />
+      <Topbar
+        title="Dashboard"
+        subtitle={`${now} · ${liveEnabled ? `Live every ${refreshEverySec}s` : 'Live refresh off'}${lastUpdated ? ` · Updated ${lastUpdated.toLocaleTimeString()}` : ''}`}
+      />
       <div className="flex-1 overflow-y-auto p-6">
         {loading ? (
           <div className="space-y-4">

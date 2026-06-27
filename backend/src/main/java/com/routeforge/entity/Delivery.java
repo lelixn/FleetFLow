@@ -1,5 +1,6 @@
 package com.routeforge.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.routeforge.enums.DeliveryStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -31,4 +32,13 @@ public class Delivery {
     private LocalDateTime scheduledTime;
 
     private LocalDateTime deliveredTime;
+
+    @Transient
+    private Long routeId;
+
+    @JsonProperty("routeId")
+    public Long getRouteId() {
+        if (routeId != null) return routeId;
+        return route != null ? route.getId() : null;
+    }
 }

@@ -3,47 +3,81 @@ import { Plus, Pencil, Trash2, Users } from 'lucide-react'
 import Topbar from '../components/layout/Topbar'
 import EmptyState from '../components/ui/EmptyState'
 import Modal from '../components/ui/Modal'
-import { driversApi, type Driver } from '../lib/api'
+import { driversApi, type Driver, extractApiError, unwrapApiData } from '../lib/api'
+import { useLiveConfig } from '../lib/live'
+import ErrorBanner from '../components/ui/ErrorBanner'
 
 const EMPTY: Partial<Driver> = { firstName: '', lastName: '', licenseNumber: '', phone: '', available: true }
 
 export default function Drivers() {
   const [drivers, setDrivers]   = useState<Driver[]>([])
   const [loading, setLoading]   = useState(true)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [modal, setModal]       = useState(false)
   const [editing, setEditing]   = useState<Partial<Driver>>(EMPTY)
   const [saving, setSaving]     = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [error, setError] = useState('')
+  const { enabled: liveEnabled, intervalSec: refreshEverySec } = useLiveConfig()
 
-  async function load() {
-    try { const { data } = await driversApi.getAll(); setDrivers(data) }
-    finally { setLoading(false) }
+  async function load(initial = false) {
+    try {
+      if (initial) setLoading(true)
+      const { data } = await driversApi.getAll()
+      const list = unwrapApiData<Driver[]>(data)
+      setDrivers(Array.isArray(list) ? list : [])
+      setLastUpdated(new Date())
+      setError('')
+    } catch (err) {
+      setDrivers([])
+      if (initial) setError(extractApiError(err, 'Failed to load drivers'))
+    }
+    finally { if (initial) setLoading(false) }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load(true)
+    if (!liveEnabled) return
+    const interval = window.setInterval(() => load(false), refreshEverySec * 1000)
+    return () => window.clearInterval(interval)
+  }, [liveEnabled, refreshEverySec])
 
   function openCreate() { setEditing(EMPTY); setModal(true) }
   function openEdit(d: Driver) { setEditing(d); setModal(true) }
 
   async function save() {
     setSaving(true)
+    setError('')
     try {
       if (editing.id) await driversApi.update(editing.id, editing)
       else await driversApi.create(editing)
-      setModal(false); load()
+      setModal(false)
+      await load()
+    } catch (err) {
+      setError(extractApiError(err, 'Failed to save driver'))
     } finally { setSaving(false) }
   }
 
   async function remove(id: number) {
-    await driversApi.delete(id)
-    setDeleteId(null); load()
+    setError('')
+    try {
+      await driversApi.delete(id)
+      setDeleteId(null)
+      await load()
+    } catch (err) {
+      setError(extractApiError(err, 'Failed to delete driver'))
+    }
   }
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <Topbar title="Drivers" subtitle={`${drivers.length} registered · ${drivers.filter(d => d.available).length} available`} />
+      <Topbar
+        title="Drivers"
+        subtitle={`${drivers.length} registered · ${drivers.filter(d => d.available).length} available · ${liveEnabled ? `Live ${refreshEverySec}s` : 'Live refresh off'}${lastUpdated ? ` · Updated ${lastUpdated.toLocaleTimeString()}` : ''}`}
+      />
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-6xl">
+          <ErrorBanner message={error} onDismiss={() => setError('')} />
           <div className="flex justify-end mb-4">
             <button onClick={openCreate} className="ff-btn ff-btn-primary"><Plus size={14} /> Add Driver</button>
           </div>

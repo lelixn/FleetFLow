@@ -6,6 +6,7 @@ import com.routeforge.repository.DriverRepository;
 import com.routeforge.service.driver.DriverService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
 
 @Service
@@ -31,8 +32,13 @@ public class DriverServiceImpl implements DriverService {
     }
 
     @Override
-    public Driver updateDriver(Long id, Driver driverDetails) {
+    public Driver updateDriver(Long id, Driver details) {
         Driver driver = getDriverById(id);
+        if (details.getFirstName() != null) driver.setFirstName(details.getFirstName());
+        if (details.getLastName() != null) driver.setLastName(details.getLastName());
+        if (details.getLicenseNumber() != null) driver.setLicenseNumber(details.getLicenseNumber());
+        if (details.getPhone() != null) driver.setPhone(details.getPhone());
+        if (details.getAvailable() != null) driver.setAvailable(details.getAvailable());
         return driverRepository.save(driver);
     }
 

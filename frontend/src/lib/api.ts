@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? '/api/v1',
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -29,6 +29,25 @@ export interface ApiResponse<T> {
   success: boolean
   message: string
   data: T
+}
+
+export function unwrapApiData<T>(payload: T | ApiResponse<T> | null | undefined): T | undefined {
+  if (payload && typeof payload === 'object' && 'data' in payload) {
+    return (payload as ApiResponse<T>).data
+  }
+  return payload ?? undefined
+}
+
+export function extractApiError(err: unknown, fallback = 'Request failed'): string {
+  if (axios.isAxiosError(err)) {
+    const data = err.response?.data as ApiResponse<unknown> | { message?: string } | undefined
+    if (data && typeof data === 'object' && 'message' in data && data.message) {
+      return String(data.message)
+    }
+    return err.message || fallback
+  }
+  if (err instanceof Error) return err.message
+  return fallback
 }
 
 export interface JwtResponse {
@@ -69,6 +88,28 @@ export const routesApi = {
 
 export const deliveriesApi = {
   getAll: () => api.get<Delivery[]>('/deliveries'),
+  getById: (id: number) => api.get<Delivery>(`/deliveries/${id}`),
+  create: (d: Partial<Delivery>) => api.post<Delivery>('/deliveries', d),
+  update: (id: number, d: Partial<Delivery>) => api.put<Delivery>(`/deliveries/${id}`, d),
+  updateStatus: (id: number, status: Delivery['status']) =>
+    api.patch<Delivery>(`/deliveries/${id}/status`, { status }),
+  delete: (id: number) => api.delete(`/deliveries/${id}`),
+}
+
+export interface AnalyticsSummary {
+  vehicles: number
+  availableVehicles: number
+  drivers: number
+  availableDrivers: number
+  routes: number
+  deliveries: number
+  pending: number
+  inTransit: number
+  delivered: number
+}
+
+export const analyticsApi = {
+  summary: () => api.get<ApiResponse<AnalyticsSummary>>('/analytics/summary'),
 }
 
 /* --- domain types --- */

@@ -1,26 +1,90 @@
 import Topbar from '../components/layout/Topbar'
 import { Server, Shield, Sliders } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import {
+  getLiveRefreshEnabled,
+  getLiveRefreshIntervalSec,
+  setLiveRefreshEnabled,
+  setLiveRefreshIntervalSec,
+} from '../lib/live'
 
 export default function Settings() {
+  const [liveEnabled, setLiveEnabled] = useState(getLiveRefreshEnabled())
+  const [liveInterval, setLiveInterval] = useState(getLiveRefreshIntervalSec())
+  const token = localStorage.getItem('ff_token')
+  const tokenPreview = useMemo(() => {
+    if (!token) return 'Not authenticated'
+    return `${token.slice(0, 14)}...`
+  }, [token])
+
+  function saveLiveSettings() {
+    setLiveRefreshEnabled(liveEnabled)
+    setLiveRefreshIntervalSec(liveInterval)
+  }
+
+  function resetLiveSettings() {
+    setLiveEnabled(true)
+    setLiveInterval(5)
+    setLiveRefreshEnabled(true)
+    setLiveRefreshIntervalSec(5)
+  }
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <Topbar title="Settings" subtitle="System configuration" />
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-2xl space-y-4">
+        <div className="max-w-3xl space-y-4">
+          <div className="ff-card p-5">
+            <p className="text-[14px] font-medium text-white">Live Tracking Controls</p>
+            <p className="text-[12px] text-[#555555] mt-0.5">
+              Configure how frequently FleetFlow refreshes data from the backend.
+            </p>
+
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="ff-label block mb-1.5">Live Refresh</label>
+                <select
+                  className="ff-input"
+                  value={liveEnabled ? 'enabled' : 'disabled'}
+                  onChange={(e) => setLiveEnabled(e.target.value === 'enabled')}
+                >
+                  <option value="enabled">Enabled</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+              </div>
+              <div>
+                <label className="ff-label block mb-1.5">Interval (seconds)</label>
+                <input
+                  className="ff-input"
+                  type="number"
+                  min={2}
+                  max={60}
+                  value={liveInterval}
+                  onChange={(e) => setLiveInterval(Number(e.target.value) || 5)}
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center gap-2">
+              <button className="ff-btn ff-btn-primary" onClick={saveLiveSettings}>Save Live Settings</button>
+              <button className="ff-btn ff-btn-ghost" onClick={resetLiveSettings}>Reset</button>
+            </div>
+          </div>
+
           {[
             {
               icon: Server,
               title: 'API Configuration',
               description: 'Backend API endpoint and connection settings.',
-              value: 'http://localhost:8080',
+              value: import.meta.env.VITE_API_BASE_URL ?? '/api/v1',
               label: 'Base URL',
             },
             {
               icon: Shield,
               title: 'Authentication',
               description: 'JWT token management and session controls.',
-              value: localStorage.getItem('ff_token') ? 'Token active' : 'Not authenticated',
-              label: 'Status',
+              value: tokenPreview,
+              label: 'Token',
             },
             {
               icon: Sliders,

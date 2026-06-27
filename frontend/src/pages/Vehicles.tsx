@@ -4,7 +4,9 @@ import Topbar from '../components/layout/Topbar'
 import Badge from '../components/ui/Badge'
 import EmptyState from '../components/ui/EmptyState'
 import Modal from '../components/ui/Modal'
-import { vehiclesApi, type Vehicle } from '../lib/api'
+import { vehiclesApi, type Vehicle, extractApiError, unwrapApiData } from '../lib/api'
+import { useLiveConfig } from '../lib/live'
+import ErrorBanner from '../components/ui/ErrorBanner'
 
 const STATUS_OPTIONS = ['AVAILABLE', 'IN_SERVICE', 'MAINTENANCE', 'OUT_OF_SERVICE']
 const EMPTY: Partial<Vehicle> = { licensePlate: '', make: '', model: '', year: new Date().getFullYear(), status: 'AVAILABLE', capacity: 0 }
@@ -12,23 +14,42 @@ const EMPTY: Partial<Vehicle> = { licensePlate: '', make: '', model: '', year: n
 export default function Vehicles() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [loading, setLoading]   = useState(true)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [modal, setModal]       = useState(false)
   const [editing, setEditing]   = useState<Partial<Vehicle>>(EMPTY)
   const [saving, setSaving]     = useState(false)
   const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [error, setError] = useState('')
+  const { enabled: liveEnabled, intervalSec: refreshEverySec } = useLiveConfig()
 
-  async function load() {
-    try { const { data } = await vehiclesApi.getAll(); setVehicles(data) }
-    finally { setLoading(false) }
+  async function load(initial = false) {
+    try {
+      if (initial) setLoading(true)
+      const { data } = await vehiclesApi.getAll()
+      const list = unwrapApiData<Vehicle[]>(data)
+      setVehicles(Array.isArray(list) ? list : [])
+      setLastUpdated(new Date())
+      setError('')
+    } catch (err) {
+      setVehicles([])
+      if (initial) setError(extractApiError(err, 'Failed to load vehicles'))
+    }
+    finally { if (initial) setLoading(false) }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load(true)
+    if (!liveEnabled) return
+    const interval = window.setInterval(() => load(false), refreshEverySec * 1000)
+    return () => window.clearInterval(interval)
+  }, [liveEnabled, refreshEverySec])
 
   function openCreate() { setEditing(EMPTY); setModal(true) }
   function openEdit(v: Vehicle) { setEditing(v); setModal(true) }
 
   async function save() {
     setSaving(true)
+    setError('')
     try {
       if (editing.id) {
         await vehiclesApi.update(editing.id, editing)
@@ -36,21 +57,32 @@ export default function Vehicles() {
         await vehiclesApi.create(editing)
       }
       setModal(false)
-      load()
+      await load()
+    } catch (err) {
+      setError(extractApiError(err, 'Failed to save vehicle'))
     } finally { setSaving(false) }
   }
 
   async function remove(id: number) {
-    await vehiclesApi.delete(id)
-    setDeleteId(null)
-    load()
+    setError('')
+    try {
+      await vehiclesApi.delete(id)
+      setDeleteId(null)
+      await load()
+    } catch (err) {
+      setError(extractApiError(err, 'Failed to delete vehicle'))
+    }
   }
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <Topbar title="Vehicles" subtitle={`${vehicles.length} registered`} />
+      <Topbar
+        title="Vehicles"
+        subtitle={`${vehicles.length} registered · ${liveEnabled ? `Live ${refreshEverySec}s` : 'Live refresh off'}${lastUpdated ? ` · Updated ${lastUpdated.toLocaleTimeString()}` : ''}`}
+      />
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-6xl">
+          <ErrorBanner message={error} onDismiss={() => setError('')} />
           <div className="flex justify-end mb-4">
             <button onClick={openCreate} className="ff-btn ff-btn-primary">
               <Plus size={14} /> Add Vehicle

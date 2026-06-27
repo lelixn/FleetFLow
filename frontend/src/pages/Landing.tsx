@@ -4,6 +4,9 @@ import { ArrowRight, ShieldCheck, Truck, MapPinned, Zap } from 'lucide-react'
 export default function Landing() {
   const token = localStorage.getItem('ff_token')
   if (token) return <Navigate to="/app" replace />
+  const eyebrowText = 'Smart Fleet Operations Platform'
+  const headlineText = 'Manage routes, vehicles, drivers, and deliveries from one live control center.'
+  const subheadlineText = 'FleetFlow helps logistics teams track daily operations in real time with faster decisions, cleaner workflows, and reliable dispatch visibility.'
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#f0f0f0]">
@@ -21,12 +24,12 @@ export default function Landing() {
       </header>
 
       <main className="max-w-6xl mx-auto px-6 pt-16 pb-20">
-        <p className="ff-label mb-3">Modern Fleet Command Center</p>
+        <p className="ff-label mb-3">{eyebrowText}</p>
         <h1 className="text-4xl md:text-5xl font-semibold leading-tight max-w-3xl">
-          Simple black-and-white operations UI for routing, vehicles, and deliveries.
+          {headlineText}
         </h1>
         <p className="text-[#888888] text-[15px] mt-5 max-w-2xl">
-          Minimal interface, fast controls, and real-time operational clarity built for system-focused logistics teams.
+          {subheadlineText}
         </p>
         <div className="flex items-center gap-3 mt-8">
           <Link to="/signup" className="ff-btn ff-btn-primary">
@@ -40,18 +43,18 @@ export default function Landing() {
           {[
             {
               icon: Truck,
-              title: 'Vehicle Control',
-              desc: 'Track fleet readiness, service status, and capacity in one clean panel.',
+              title: 'Fleet Availability',
+              desc: 'Monitor vehicle status, readiness, and capacity to keep dispatch efficient.',
             },
             {
               icon: MapPinned,
-              title: 'Route Visibility',
-              desc: 'Monitor route plans and assignment data with a no-noise workflow.',
+              title: 'Route Intelligence',
+              desc: 'View active routes, assignments, and delivery progress in a single workflow.',
             },
             {
               icon: ShieldCheck,
-              title: 'Secure Access',
-              desc: 'JWT-based auth with private app routes and protected API requests.',
+              title: 'Operational Security',
+              desc: 'Protected access controls ensure only authorized teams manage critical operations.',
             },
           ].map(({ icon: Icon, title, desc }) => (
             <div key={title} className="ff-card p-5">

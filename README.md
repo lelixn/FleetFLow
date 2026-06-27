@@ -2,49 +2,64 @@
 
 FleetFlow is a full-stack fleet management and route optimization platform built with React + TypeScript on the frontend and Spring Boot on the backend.
 
-It helps teams manage vehicles, drivers, routes, and deliveries from a single dashboard with JWT-based authentication and a clean API layer.
+It helps teams manage vehicles, drivers, routes, and deliveries from a single dashboard with JWT-based authentication, live data refresh, and a production-ready Docker deployment path.
 
 ## Tech Stack
 
-- Frontend: React, TypeScript, Vite, Tailwind CSS, Axios, React Router
-- Backend: Spring Boot 3, Spring Security, Spring Data JPA, JWT
-- Database: H2 (default, in-memory), PostgreSQL driver included
+- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS, Axios, React Router
+- **Backend:** Spring Boot 3.3, Spring Security, Spring Data JPA, JWT, Actuator
+- **Database:** H2 (local dev), PostgreSQL (production / Docker)
 
 ## Project Structure
 
 ```text
 FleetFlow/
-|- frontend/   # React + Vite app
-|- backend/    # Spring Boot REST API
-|- docs/       # project docs
+├── frontend/          # React + Vite app
+├── backend/           # Spring Boot REST API
+├── docker-compose.yml # PostgreSQL + API + nginx frontend
+└── docs/
 ```
 
 ## Core Features
 
-- Authentication with JWT (`/api/v1/auth/**`)
-- Fleet management for vehicles and drivers
-- Route management and assignment support
-- Delivery tracking views
-- Typed frontend API client with auth interceptors
+- JWT authentication (`/api/v1/auth/**`)
+- Full CRUD for vehicles, drivers, routes, and deliveries
+- Delivery status workflow: `PENDING → IN_TRANSIT → DELIVERED` (or `FAILED`)
+- Route assignment to drivers and vehicles
+- Analytics summary dashboard with live polling
+- Command palette (Ctrl/Cmd+K) for quick navigation
+- Health checks: `/api/v1/health`, `/actuator/health`
 
-## Quick Start
+## Quick Start (Local Development)
 
-### 1) Prerequisites
+### Prerequisites
 
 - Node.js 18+
 - Java 17+
 - Maven 3.9+
 
-### 2) Run Backend (Spring Boot)
+### Backend
 
 ```bash
 cd backend
 mvn spring-boot:run
 ```
 
-Backend runs on `http://localhost:8081` by default.
+Backend runs on `http://localhost:8081`.
 
-### 3) Run Frontend (Vite)
+On Windows/PowerShell:
+
+```powershell
+cd backend
+.\run-dev.ps1 -KillExisting -SeedDemo
+```
+
+`-SeedDemo` loads sample fleet data and an admin account:
+
+- **Username:** `admin`
+- **Password:** `Admin123!`
+
+### Frontend
 
 ```bash
 cd frontend
@@ -52,71 +67,106 @@ npm install
 npm run dev
 ```
 
-Frontend runs on `http://localhost:5173` by default.
+Frontend runs on `http://localhost:5173`. The Vite dev server proxies `/api/*` to the backend.
 
-The Vite dev server proxies `/api/*` to `http://localhost:8081`.
+Copy `frontend/.env.example` to `frontend/.env` to customize:
 
-## Configuration
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `VITE_PORT` | `5173` | Dev server port |
+| `VITE_API_PROXY_TARGET` | `http://localhost:8081` | Backend URL for dev proxy |
+| `VITE_API_BASE_URL` | `/api/v1` | Axios base URL |
 
-Backend config file: `backend/src/main/resources/application.properties`
+## Production Deployment (Docker)
 
-Current default setup includes:
-- H2 in-memory database
-- `server.port=8081`
-- JWT secret + expiration settings
+Deploy the full stack with PostgreSQL:
 
-For production:
-- Replace H2 with PostgreSQL connection settings
-- Move secrets (JWT, DB credentials) to environment variables or secure secret storage
-- Disable or lock down development-only features
+```bash
+# Set a strong JWT secret (required in production)
+export JWT_SECRET="your-long-random-base64-secret"
 
-## Frontend Scripts
+docker compose up --build
+```
 
-Run from `frontend/`:
+| Service | URL |
+|---------|-----|
+| Frontend (nginx) | http://localhost:8080 |
+| Backend API | http://localhost:8081 |
+| PostgreSQL | localhost:5432 |
 
-- `npm run dev` - start development server
-- `npm run build` - type-check and build production bundle
-- `npm run preview` - preview production build
-- `npm run lint` - run ESLint
+The frontend container proxies `/api/*` to the backend, so `VITE_API_BASE_URL=/api/v1` works without CORS issues.
 
-## Backend Scripts
+### Production profile
 
-Run from `backend/`:
+The backend uses `spring.profiles.active=prod` in Docker with:
 
-- `mvn spring-boot:run` - start API server
-- `mvn test` - run backend tests
-- `mvn clean package` - build JAR
+- PostgreSQL connection (via env vars)
+- Hibernate `ddl-auto=update` (use Flyway/Liquibase for hardened prod)
+- Seed data disabled
+- Actuator health exposed at `/actuator/health`
 
-## API Base Path
+### Environment variables (backend)
 
-The API uses versioned routes under:
+| Variable | Description |
+|----------|-------------|
+| `SERVER_PORT` | API port (default `8081`) |
+| `SPRING_PROFILES_ACTIVE` | Set to `prod` for PostgreSQL |
+| `SPRING_DATASOURCE_URL` | JDBC URL |
+| `SPRING_DATASOURCE_USERNAME` | DB user |
+| `SPRING_DATASOURCE_PASSWORD` | DB password |
+| `JWT_SECRET` | **Required in prod** — Base64-encoded secret |
+| `JWT_EXPIRATION` | Token TTL in ms (default 86400000) |
+| `APP_SEED_ENABLED` | Load demo data on startup (`true`/`false`) |
 
-`/api/v1`
+## API Reference
 
-Example resources include:
-- `/api/v1/auth`
-- `/api/v1/vehicles`
-- `/api/v1/drivers`
-- `/api/v1/routes`
-- `/api/v1/deliveries`
+Base path: `/api/v1`
 
-## Build for Production
+| Resource | Endpoints |
+|----------|-----------|
+| Auth | `POST /auth/login`, `POST /auth/signup` |
+| Vehicles | `GET/POST /vehicles`, `GET/PUT/DELETE /vehicles/{id}` |
+| Drivers | `GET/POST /drivers`, `GET/PUT/DELETE /drivers/{id}` |
+| Routes | `GET/POST /routes`, `GET/PUT/DELETE /routes/{id}` |
+| Deliveries | `GET/POST /deliveries`, `GET/PUT/DELETE /deliveries/{id}`, `PATCH /deliveries/{id}/status` |
+| Analytics | `GET /analytics/summary` |
+| Health | `GET /health` (public) |
 
-Frontend:
+All endpoints except auth and health require `Authorization: Bearer <token>`.
+
+## Build Commands
+
+**Frontend:**
 
 ```bash
 cd frontend
-npm run build
+npm run build    # production bundle in dist/
+npm run lint
 ```
 
-Backend:
+**Backend:**
 
 ```bash
 cd backend
-mvn clean package
+mvn test
+mvn clean package   # JAR in target/
 ```
 
-## Notes
+## Architecture Notes
 
-- The existing `frontend/README.md` is the default Vite template and can be replaced later with app-specific frontend documentation if needed.
-- Start backend first, then frontend, to avoid API connection errors during development.
+- API responses use a consistent wrapper: `{ success, message, data }`. The frontend `unwrapApiData()` helper handles this.
+- Live refresh polls the backend every 2–60 seconds (configurable in Settings).
+- Signup validates input and rejects duplicate usernames/emails.
+- Disabled accounts cannot log in.
+- Route and delivery entities accept foreign-key IDs (`driverId`, `vehicleId`, `routeId`) from the frontend.
+
+## Next Steps for Hardened Production
+
+These are recommended before a public SaaS launch:
+
+1. **Database migrations** — Add Flyway with versioned schema instead of `ddl-auto=update`
+2. **RBAC** — Restrict admin CRUD to `ADMIN` role; scope driver access to assigned routes
+3. **HTTPS** — Terminate TLS at a reverse proxy (nginx, Caddy, or cloud load balancer)
+4. **Secrets management** — Use Docker secrets, Vault, or cloud KMS for JWT and DB credentials
+5. **Observability** — Wire Actuator metrics to Prometheus/Grafana; add structured logging
+6. **Rate limiting** — Protect auth endpoints from brute-force attempts
