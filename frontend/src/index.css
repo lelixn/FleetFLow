@@ -98,10 +98,10 @@
   .ff-btn-primary:hover { background: #e8e8e8; }
   .ff-btn-ghost {
     background: transparent;
-    color: #888888;
+    color: #b0b0b0;
     border-color: #2a2a2a;
   }
-  .ff-btn-ghost:hover { background: #1a1a1a; color: #f0f0f0; border-color: #3f3f3f; }
+  .ff-btn-ghost:hover { background: #1a1a1a; color: #f0f0f0; border-color: #4a4a4a; }
   .ff-btn-danger {
     background: transparent;
     color: #f0a8a8;

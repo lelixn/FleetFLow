@@ -1,5 +1,6 @@
 package com.routeforge.controller.analytics;
 
+import com.routeforge.dto.AnalyticsSummary;
 import com.routeforge.service.analytics.AnalyticsService;
 import com.routeforge.util.ApiResponse;
 import com.routeforge.util.Constants;
@@ -13,4 +14,10 @@ import org.springframework.web.bind.annotation.*;
 public class AnalyticsController {
 
     private final AnalyticsService analyticsService;
+
+    @GetMapping("/summary")
+    public ResponseEntity<ApiResponse<AnalyticsSummary>> summary() {
+        AnalyticsSummary summary = analyticsService.getSummary();
+        return ResponseEntity.ok(ApiResponse.success(summary, "Analytics summary retrieved successfully"));
+    }
 }

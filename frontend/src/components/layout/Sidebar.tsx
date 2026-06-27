@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import {
   LayoutDashboard, Truck, Users, MapPin, Package,
   Settings, ChevronRight, Zap,
@@ -14,6 +15,28 @@ const nav = [
 ]
 
 export default function Sidebar() {
+  const [backendOnline, setBackendOnline] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+
+    async function checkBackend() {
+      try {
+        const res = await fetch('/api/v1/health')
+        if (mounted) setBackendOnline(res.ok)
+      } catch {
+        if (mounted) setBackendOnline(false)
+      }
+    }
+
+    checkBackend()
+    const interval = setInterval(checkBackend, 15000)
+    return () => {
+      mounted = false
+      clearInterval(interval)
+    }
+  }, [])
+
   return (
     <aside className="flex flex-col w-56 shrink-0 border-r border-[#2a2a2a] bg-[#0a0a0a] h-full">
       {/* Brand */}
@@ -64,8 +87,26 @@ export default function Sidebar() {
         <div className="mt-3 px-2 py-2 rounded bg-[#111111] border border-[#2a2a2a]">
           <p className="ff-label mb-0.5">System</p>
           <div className="flex items-center gap-1.5 mt-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#a8f0a8] animate-pulse" />
-            <span className="text-[11px] text-[#a8f0a8] ff-mono">Backend online</span>
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                backendOnline === null
+                  ? 'bg-[#f0e0a8]'
+                  : backendOnline
+                    ? 'bg-[#a8f0a8] animate-pulse'
+                    : 'bg-[#f0a8a8]'
+              }`}
+            />
+            <span
+              className={`text-[11px] ff-mono ${
+                backendOnline === null
+                  ? 'text-[#f0e0a8]'
+                  : backendOnline
+                    ? 'text-[#a8f0a8]'
+                    : 'text-[#f0a8a8]'
+              }`}
+            >
+              {backendOnline === null ? 'Checking backend...' : backendOnline ? 'Backend online' : 'Backend offline'}
+            </span>
           </div>
         </div>
       </div>

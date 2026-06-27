@@ -8,6 +8,7 @@ interface Props {
 
 export default function Topbar({ title, subtitle }: Props) {
   const navigate = useNavigate()
+  const openPalette = () => window.dispatchEvent(new Event('ff-open-command-palette'))
 
   function logout() {
     localStorage.removeItem('ff_token')
@@ -23,26 +24,27 @@ export default function Topbar({ title, subtitle }: Props) {
 
       <div className="flex items-center gap-2">
         {/* Search */}
-        <div className="relative">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#555555]" />
+        <button className="relative cursor-pointer" onClick={openPalette} title="Open Command Palette">
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9a9a9a]" />
           <input
-            className="ff-input pl-8 w-52 text-[13px] h-8"
-            placeholder="Search..."
+            className="ff-input pl-8 w-56 text-[13px] h-8 border-[#3a3a3a]"
+            placeholder="Search... (Ctrl/Cmd + K)"
+            readOnly
           />
-        </div>
+        </button>
 
         {/* Notification */}
-        <button className="ff-btn ff-btn-ghost w-8 h-8 p-0">
-          <Bell size={14} />
+        <button className="ff-btn ff-btn-ghost w-8 h-8 p-0 text-[#d0d0d0] border-[#3a3a3a] hover:text-white" title="Notifications">
+          <Bell size={15} strokeWidth={2.1} />
         </button>
 
         {/* Avatar + Logout */}
         <div className="flex items-center gap-2 ml-1 pl-3 border-l border-[#2a2a2a]">
-          <div className="w-7 h-7 rounded-sm bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center ff-mono text-[11px] text-white">
+          <div className="w-7 h-7 rounded-sm bg-[#111111] border border-[#3a3a3a] flex items-center justify-center ff-mono text-[11px] text-white">
             A
           </div>
-          <button onClick={logout} className="ff-btn ff-btn-ghost w-8 h-8 p-0" title="Log out">
-            <LogOut size={13} />
+          <button onClick={logout} className="ff-btn ff-btn-ghost w-8 h-8 p-0 text-[#d0d0d0] border-[#3a3a3a] hover:text-white" title="Log out">
+            <LogOut size={15} strokeWidth={2.1} />
           </button>
         </div>
       </div>
