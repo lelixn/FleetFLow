@@ -152,31 +152,3 @@ mvn test
 mvn clean package   # JAR in target/
 ```
 
-## Architecture Notes
-
-- API responses use a consistent wrapper: `{ success, message, data }`. The frontend `unwrapApiData()` helper handles this.
-- Live refresh polls the backend every 2–60 seconds (configurable in Settings).
-- Signup validates input and rejects duplicate usernames/emails.
-- Disabled accounts cannot log in.
-- Route and delivery entities accept foreign-key IDs (`driverId`, `vehicleId`, `routeId`) from the frontend.
-
-## Next Steps for Hardened Production
-
-These are recommended before a public SaaS launch:
-
-1. **Database migrations** — Add Flyway with versioned schema instead of `ddl-auto=update`
-2. **RBAC** — Restrict admin CRUD to `ADMIN` role; scope driver access to assigned routes
-3. **HTTPS** — Terminate TLS at a reverse proxy (nginx, Caddy, or cloud load balancer)
-4. **Secrets management** — Use Docker secrets, Vault, or cloud KMS for JWT and DB credentials
-5. **Observability** — Wire Actuator metrics to Prometheus/Grafana; add structured logging
-6. **Rate limiting** — Protect auth endpoints from brute-force attempts
-
-## AIML Integration Pathway
-
-FleetFlow is ready for AI/ML integration! Here are key areas:
-
-1. **Route Optimization**: Use historical tracking and delivery data to optimize routes
-2. **Demand Forecasting**: Predict delivery demands to plan better fleet allocation
-3. **Driver Performance Analysis**: Identify patterns in driver behavior and efficiency
-4. **Vehicle Maintenance Predictions**: Use vehicle telemetry to forecast maintenance needs
-5. **ETA Predictions**: Build machine learning models to predict accurate delivery times
