@@ -59,21 +59,7 @@ jobs:
           mvn sonar:sonar -Dsonar.projectKey=fleetflow-backend -Dsonar.host.url=https://sonarcloud.io -Dsonar.login=${{ secrets.SONAR_TOKEN }} || echo "SonarQube not configured"
         continue-on-error: true
 
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: backend-test-results
-          path: backend/target/surefire-reports/
-          retention-days: 7
-
-      - name: Upload coverage reports
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: backend-coverage
-          path: backend/target/site/jacoco/
-          retention-days: 7
+      
 
       - name: Comment PR with test results
         if: github.event_name == 'pull_request'
